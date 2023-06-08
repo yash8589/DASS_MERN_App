@@ -1,0 +1,57 @@
+version: '3'
+services: 
+    mongoDb:
+        image: mongo:5.0.5
+        restart: always
+        environment:
+          - MONGO_INITDB_ROOT_USERNAME=root
+          - MONGO_INITDB_ROOT_PASSWORD=example
+        ports:
+          - 27017:27017
+        volumes: 
+            - db-volume:/data/db    
+            
+    backend:   
+        build:
+            context: ./backend
+            dockerfile: Dockerfile
+        volumes: 
+            - /app/node_modules
+            - ./backend:/app    
+        environment: 
+            - MONGODB_URI=mongodb://root:example@mongoDb:27017/dockerizingMernApplicationTestDB?authSource=admin
+            - CHOKIDAR_USEPOLLING=true
+        depends_on: 
+            - mongoDb   
+        restart: always    
+        ports:
+            - 5000:5000
+        command: npm start
+
+    frontend:   
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+        volumes: 
+            - /app/node_modules
+            - ./frontend:/app    
+        #request will forward to same url, so we only need /api to distinguish that this request will forward to our backend           
+        environment: 
+            - REACT_APP_BACKEND_URL=/api
+            - CHOKIDAR_USEPOLLING=true
+        ports:
+            - 3000:3000
+        command: npm start
+        tty: true
+        stdin_open: true
+    
+    nginx:
+        build:
+            context: ./nginx
+            dockerfile: Dockerfile
+        ports: 
+            - 4000:80
+        restart: always
+
+volumes: 
+    db-volume:
